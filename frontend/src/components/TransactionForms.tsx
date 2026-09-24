@@ -88,9 +88,9 @@ function FormField({
 
 // ─── CapWarning ───────────────────────────────────────────────────────────────
 
-function CapWarning({ message }: { message: string }) {
+function CapWarning({ message, id }: { message: string; id: string }) {
   return (
-    <div className="form-cap-warning" role="alert" aria-live="assertive">
+    <div id={id} className="form-cap-warning" role="alert" aria-live="assertive">
       <span className="form-cap-warning__icon" aria-hidden="true">⛔</span>
       <p className="form-cap-warning__text">{message}</p>
     </div>
@@ -153,7 +153,7 @@ export function ApplyForm({
     <form className="tx-form" onSubmit={handleSubmit} noValidate>
       <h3 className="tx-form__title">Apply for Issue</h3>
 
-      {capError && <CapWarning message={capError.message} />}
+      {capError && <CapWarning id={`${uid}-cap-err`} message={capError.message} />}
 
       <FormField
         label="Organisation ID"
