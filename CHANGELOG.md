@@ -41,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   New tokens added: `--color-error-600: #dc2626`, `--color-success-600: #16a34a`,
   `--color-warning-600: #ca8a04`. All fixes applied at token level — no component overrides.
+- **#809 Toast keyboard accessibility**: Toast notifications now include a visible,
+  focusable dismiss button, support Escape-key dismissal, and pause auto-dismiss while
+  hovered or focused.
 
 ### Added
 - Inline Rustdoc comments for every `pub fn` in the contract source (#68).
