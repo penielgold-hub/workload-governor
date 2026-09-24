@@ -105,6 +105,20 @@ describe('ApplyForm', () => {
     expect(screen.getByRole('button', { name: /apply/i })).toBeDisabled()
   })
 
+  it('associates the cap warning with the Apply submit button', () => {
+    render(
+      <ApplyForm
+        onSubmit={vi.fn()}
+        capStatus={{ globalSlotsRemaining: 0, orgSlotsRemaining: 3 }}
+      />
+    )
+    const warning = screen.getByRole('alert')
+    const submit = screen.getByRole('button', { name: /apply/i })
+
+    expect(warning).toHaveAttribute('id')
+    expect(submit).toHaveAttribute('aria-describedby', warning.id)
+  })
+
   it('calls onSubmit with valid data', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     render(
