@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Withdraw button is now disabled while a withdrawal transaction is pending to
+  prevent duplicate withdrawal submissions (#808).
+
 ### Added
 - **#327 SVG icon system**: Consolidated all UI icons into a single sprite file at
   `frontend/public/icons.svg` (30+ symbols). New `Icon` component
