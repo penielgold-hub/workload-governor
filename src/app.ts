@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
+import { SorobanRpc } from '@stellar/stellar-sdk';
 import issuesRouter from './routes/issues';
 import contributorsRouter from './routes/contributors';
 import adminRouter from './routes/admin';
@@ -10,11 +11,39 @@ import transactionsRouter from './routes/transactions';
 import webhooksRouter from './routes/webhooks';
 import eventsRouter from './routes/events';
 import orgsRouter from './routes/orgs';
+import verifyXdrRouter from './routes/verify-xdr';
 import { globalLimiter, walletLimiter } from './middleware/rate-limit';
 import { apiKeyAuth } from './middleware/api-key-auth';
 import { correlationIdMiddleware } from './logger';
 import { errorHandler } from './errors';
 import { setupSwagger } from './swagger';
+import { auditMiddleware } from './middleware/audit';
+import { metricsMiddleware, metricsHandler } from './metrics';
+
+async function getSorobanHealth() {
+  const rpcUrl = process.env.SOROBAN_RPC_URL ?? 'https://soroban-testnet.stellar.org';
+  const server = new SorobanRpc.Server(rpcUrl, { allowHttp: true });
+  const startedAt = Date.now();
+
+  try {
+    const latest = await server.getLatestLedger();
+    const latencyMs = Date.now() - startedAt;
+    const status = latencyMs > 5000 ? 'degraded' : 'ok';
+
+    return {
+      status,
+      latency_ms: latencyMs,
+      ledger: Number(latest.sequence),
+    };
+  } catch (error) {
+    return {
+      status: 'down',
+      latency_ms: Date.now() - startedAt,
+      ledger: null,
+      error: error instanceof Error ? error.message : 'Unknown Soroban RPC error',
+    };
+  }
+}
 
 export function createApp(): express.Application {
   const app = express();
@@ -37,13 +66,38 @@ export function createApp(): express.Application {
   app.use(express.static('public'));
   app.use(correlationIdMiddleware);
 
+  // Metrics middleware — record HTTP request metrics
+  app.use(metricsMiddleware());
+
   // Rate limiting middleware
   app.use(globalLimiter);
   app.use(apiKeyAuth);
 
+  // Audit logging for all state-changing operations
+  app.use(auditMiddleware);
+
   setupSwagger(app);
 
-  app.get('/health', (_req: Request, res: Response) => res.json({ status: 'ok' }));
+  // Metrics endpoint — returns Prometheus text format metrics
+  app.get('/metrics', metricsHandler);
+
+  app.get('/health', async (_req: Request, res: Response) => {
+    const soroban = await getSorobanHealth();
+    const status = soroban.status === 'down' ? 'degraded' : 'ok';
+    return res.json({ status, soroban });
+  });
+
+  app.get('/health/network', async (_req: Request, res: Response) => {
+    const soroban = await getSorobanHealth();
+    const code = soroban.status === 'down' ? 503 : soroban.status === 'degraded' ? 200 : 200;
+    return res.status(code).json({ soroban });
+  });
+
+  app.get('/api/health/network', async (_req: Request, res: Response) => {
+    const soroban = await getSorobanHealth();
+    const code = soroban.status === 'down' ? 503 : soroban.status === 'degraded' ? 200 : 200;
+    return res.status(code).json({ soroban });
+  });
 
   // Routes
   app.use('/api/issues', issuesRouter);
@@ -53,6 +107,7 @@ export function createApp(): express.Application {
   app.use('/api/transactions', walletLimiter, transactionsRouter);
   app.use('/api/events', eventsRouter);
   app.use('/api', orgsRouter);
+  app.use('/api', verifyXdrRouter);
   app.use('/webhooks', webhooksRouter);
 
   // Malformed JSON body — Express JSON parser raises SyntaxError with status 400

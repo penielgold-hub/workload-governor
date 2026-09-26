@@ -24,7 +24,7 @@ jobs:
       # -----------------------------------------------------------------------
       # 1. Checkout
       # -----------------------------------------------------------------------
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # -----------------------------------------------------------------------
       # 2. Rust toolchain — reuse the same cache key as contract-ci.yml
@@ -80,7 +80,7 @@ jobs:
       # -----------------------------------------------------------------------
       - name: Upload benchmark output
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: benchmark-output-${{ github.run_id }}
           path: bench-output.txt
